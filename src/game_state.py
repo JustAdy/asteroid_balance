@@ -567,6 +567,11 @@ def destroy_asteroid(asteroid):
     global score
     from asteroid import Asteroid
 
+    if getattr(asteroid, "is_boss", False):
+        asteroid.on_death()
+        sfx_explosion.play()
+        return
+
     explosion(asteroid.x, asteroid.y)
 
     # >>> SOUND HOOK: play your asteroid-explosion sound effect here, e.g.
@@ -586,6 +591,15 @@ def destroy_asteroid(asteroid):
         score += 50
         gain_xp(30)
 
+def end_run():
+    global state, game_over_timer, new_high_score
+    trigger_shake(16, 0.5)
+    new_high_score = (not leaderboard) or (score > leaderboard[0]["score"])
+    add_leaderboard_entry(score, elapsed_time)
+    state = STATE_GAME_OVER
+    game_over_timer = 0.0
+    reset_menu_nav()
+    play_music("menu")
 
 def spawn_asteroid():
     from asteroid import Asteroid
@@ -637,6 +651,9 @@ def reset_game(chosen_weapon):
     HIT_INVULN_TIME = BASE_HIT_INVULN_TIME
 
     laser_end = (ship.x, ship.y)
+
+    import boss
+    boss.reset()
 
 
 def choose_weapon(w):

@@ -60,6 +60,7 @@ FILE LAYOUT:
 import math
 import random
 import pygame
+import boss  # noqa: E402
 
 import game_state as gs
 
@@ -184,13 +185,16 @@ while running:
         # harder and faster the longer a run goes on.
         gs.wave = 1 + gs.score // 400
 
+        boss.maybe_spawn_boss()
+
         gs.spawn_timer -= dt
         if gs.spawn_timer <= 0:
             gs.spawn_timer = max(
                 0.15,
                 0.9 - gs.wave * 0.035 - gs.level * 0.012 - gs.elapsed_time * 0.0025
             )
-            gs.spawn_asteroid()
+            if not (boss.BOSS_BLOCKS_NORMAL_SPAWNS and boss.is_boss_active()):
+                gs.spawn_asteroid()
 
         for bullet in gs.bullets:
             bullet.update(dt)
@@ -276,7 +280,8 @@ while running:
                     gs.ship.x, gs.ship.y, 18,
                     asteroid.x, asteroid.y, asteroid.radius
                 ):
-                    gs.asteroids.remove(asteroid)
+                    if not getattr(asteroid, "is_boss", False):
+                        gs.asteroids.remove(asteroid)
 
                     gs.ship.hp -= 1
                     gs.ship.invulnerable = gs.HIT_INVULN_TIME
@@ -297,6 +302,11 @@ while running:
 
                         # >>> SOUND HOOK: play your game-over sound effect
                         #     here, e.g. sfx_gameover.play()
+        
+        for asteroid in gs.asteroids[:]:
+            if getattr(asteroid, "is_boss", False) and asteroid.y >= gs.HEIGHT \
+                    and gs.state == gs.STATE_PLAYING:
+                boss.on_escape(asteroid)
 
         # Asteroids leaving the screen
         for asteroid in gs.asteroids[:]:
@@ -367,6 +377,8 @@ while running:
         xp_ratio = gs.clamp(gs.xp / gs.xp_to_next, 0, 1)
         pygame.draw.rect(gs.screen, (40, 45, 60), (0, 0, gs.WIDTH, 6))
         pygame.draw.rect(gs.screen, (120, 230, 170), (0, 0, gs.WIDTH * xp_ratio, 6))
+
+        boss.draw_boss_ui()
 
         status_rect = pygame.Rect(10, gs.HEIGHT - 76, 330, 66)
         gs.draw_panel(status_rect)
