@@ -15,7 +15,7 @@ import game_state as gs
 # CONFIG - EDIT BOSS STATS HERE
 # ============================================================================
 
-BOSS_EVERY_N_WAVES = 5          # a boss appears at wave 5, 10, 15, ...
+BOSS_EVERY_N_WAVES = 10          # a boss appears at wave 10, 20, 30, ...
 BOSS_BLOCKS_NORMAL_SPAWNS = False  # True = no regular asteroids while a boss is alive
 
 # What happens if a boss reaches the bottom of the screen.

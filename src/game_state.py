@@ -124,7 +124,7 @@ BASE_BULLET_PIERCE = 0
 BASE_BULLET_RANGE = 1.3       # bullet lifetime in seconds; combined with
                                # bullet speed this sets how far it travels
 
-BASE_LASER_DPS = 130          # buffed: laser hits hard from the start
+BASE_LASER_DPS = 200          # buffed: laser hits hard from the start
 BASE_LASER_PIERCE = 0
 BASE_LASER_BEAM_BONUS = 20
 
@@ -567,7 +567,7 @@ def destroy_asteroid(asteroid):
     global score
     from asteroid import Asteroid
 
-    if getattr(asteroid, "is_boss", False):
+    if hasattr(asteroid, "on_death"):
         asteroid.on_death()
         sfx_explosion.play()
         return
@@ -600,6 +600,15 @@ def end_run():
     game_over_timer = 0.0
     reset_menu_nav()
     play_music("menu")
+
+def damage_ship(amount=1):
+    ship.hp -= amount
+    ship.invulnerable = HIT_INVULN_TIME
+    explosion(ship.x, ship.y, 28)
+    trigger_shake(8, 0.25)
+    sfx_hit.play()
+    if ship.hp <= 0:
+        end_run()
 
 def spawn_asteroid():
     from asteroid import Asteroid
@@ -654,6 +663,9 @@ def reset_game(chosen_weapon):
 
     import boss
     boss.reset()
+
+    import alien
+    alien.reset()
 
 
 def choose_weapon(w):

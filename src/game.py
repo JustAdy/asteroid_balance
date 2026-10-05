@@ -60,7 +60,6 @@ FILE LAYOUT:
 import math
 import random
 import pygame
-import boss  # noqa: E402
 
 import game_state as gs
 
@@ -71,6 +70,8 @@ gs.init()
 import upgrades  # noqa: E402
 import ui  # noqa: E402
 from particle import Particle  # noqa: E402
+import boss  # noqa: E402
+import alien  # noqa: E402
 
 gs.play_music("menu")
 
@@ -186,6 +187,7 @@ while running:
         gs.wave = 1 + gs.score // 400
 
         boss.maybe_spawn_boss()
+        alien.update(dt)
 
         gs.spawn_timer -= dt
         if gs.spawn_timer <= 0:
@@ -198,6 +200,7 @@ while running:
 
         for bullet in gs.bullets:
             bullet.update(dt)
+        alien.draw_projectiles()
         for asteroid in gs.asteroids:
             asteroid.update(dt)
         for particle in gs.particles:
@@ -365,10 +368,10 @@ while running:
         hud_rect = pygame.Rect(10, 10, gs.WIDTH - 20, 78)
         gs.draw_panel(hud_rect)
 
-        gs.draw_text(f"❤️ {gs.ship.hp}", (28, 20))
-        gs.draw_text(f"⭐ {gs.score}", (gs.WIDTH - 170, 20))
-        gs.draw_text(f"Wave {gs.wave}", (gs.WIDTH // 2, 20), center=True)
-        gs.draw_text(f"Lv {gs.level}", (28, 52), gs.FONT, (170, 230, 170))
+        gs.draw_text(f"HP {gs.ship.hp}", (28, 20))
+        gs.draw_text(f"SCORE {gs.score}", (gs.WIDTH - 170, 20))
+        gs.draw_text(f"WAVE {gs.wave}", (gs.WIDTH // 2, 20), center=True)
+        gs.draw_text(f"LEVEL {gs.level}", (28, 52), gs.FONT, (170, 230, 170))
 
         weapon_label = gs.WEAPON_INFO[gs.weapon_type]["name"] if gs.weapon_type else ""
         gs.draw_text(f"Weapon: {weapon_label}", (gs.WIDTH // 2, 52), gs.FONT, (170, 200, 255), center=True)
