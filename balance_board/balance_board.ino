@@ -1,7 +1,7 @@
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
-#include <HX711.h>
+#include <HX711.h> // https://github.com/RobTillaart/HX711?tab=MIT-1-ov-file
 #include "Joystick.h" // https://github.com/MHeironimus/ArduinoJoystickLibrary/tree/version-1.0
 
 Adafruit_MPU6050 mpu;
@@ -10,6 +10,9 @@ HX711 hx;
 // Set to true to test "Auto Send" mode or false to test "Manual Send" mode.
 //const bool testAutoSendMode = true;
 const bool testAutoSendMode = true;
+float lastWeight = 0;
+float currentWeight = 0;
+float treshold = 250000; // when the inscrease is more than the treshold, register it as jump
 
 void setup(void) {
   Serial.begin(115200);
@@ -41,13 +44,11 @@ void setup(void) {
     Joystick.begin(false);
   }
 
+  // data pin, clock pin
   hx.begin(4, 5, false, true);
   hx.set_rate_80SPS();
 
   hx.tare();
-
-  Serial.println("Wait HX711 ready...");
-  while(!hx.is_ready());
 
   delay(100);
 }
@@ -62,15 +63,27 @@ void loop() {
 
   Joystick.setXAxis(a.acceleration.y);
 
-  float weight = 0;
   if (hx.is_ready())
   {
-    weight = hx.read();
+    lastWeight = currentWeight;
+    currentWeight = hx.read();
     Serial.print("Weight: ");
-    Serial.println(weight);
+    Serial.println(currentWeight);
+    
+    if (lastWeight + treshold <= currentWeight)
+    {
+      // jump
+
+      Joystick.pressButton(0);
+      Serial.println();
+      Serial.println("JUMP!!!");
+      Serial.println();
+      
+    }
   }
 
   Serial.print(a.acceleration.y);
   Serial.println("");
   delay(50);
+  Joystick.releaseButton(0);
 }
