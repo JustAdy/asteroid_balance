@@ -690,13 +690,36 @@ jump_flash_timer = 0.0
 jump_last_pad = None       # 1 or 2 (index in joysticks + 1), None = unknown
 
 
+jump_counts = {}           # pad number -> jumps from that pad
+
+
+def add_joystick(device_index):
+    """Open a controller (used for hot-plug). Ignores ones already open."""
+    global move_pad, aim_pad
+    try:
+        js = pygame.joystick.Joystick(device_index)
+    except Exception:
+        return
+    js_id = js.get_instance_id() if hasattr(js, "get_instance_id") else js.get_id()
+    for old in joysticks:
+        old_id = old.get_instance_id() if hasattr(old, "get_instance_id") else old.get_id()
+        if old_id == js_id:
+            return
+    js.init()
+    joysticks.append(js)
+    print(f"Controller {len(joysticks)} connected: {js.get_name()}")
+    if move_pad is None:
+        move_pad = js
+    elif aim_pad is None:
+        aim_pad = js
+
+
 def register_jump(event):
     """Called when the jump button is pressed on any controller."""
     global jump_count, jump_flash_timer, jump_last_pad
     jump_count += 1
     jump_flash_timer = JUMP_FLASH_TIME
 
-    # Work out which connected pad sent it (pygame 2 / pygame-ce differences)
     inst = getattr(event, "instance_id", getattr(event, "joy", None))
     jump_last_pad = None
     for i, js in enumerate(joysticks):
@@ -704,4 +727,25 @@ def register_jump(event):
         if js_id == inst:
             jump_last_pad = i + 1
             break
+    jump_counts[jump_last_pad] = jump_counts.get(jump_last_pad, 0) + 1
     print(f"JUMP #{jump_count} from controller {jump_last_pad} (raw id {inst})")
+
+
+def draw_jump_debug():
+    surf = SMALL_FONT.render(f"Jumps: {jump_count}", True, (150, 190, 220))
+    screen.blit(surf, (WIDTH - surf.get_width() - 20, HEIGHT - 40))
+
+    # Live per-controller panel (top right)
+    y = 100
+    draw_text(f"Controllers found: {len(joysticks)}", (WIDTH - 560, y), SMALL_FONT, (255, 210, 80))
+    for i, js in enumerate(joysticks):
+        y += 26
+        btn = js.get_button(JUMP_BUTTON) if js.get_numbuttons() > JUMP_BUTTON else -1
+        line = (f"#{i + 1} {js.get_name()[:22]}  axis0={js.get_axis(0):+.2f}  "
+                f"btn{JUMP_BUTTON}={btn}  jumps={jump_counts.get(i + 1, 0)}")
+        draw_text(line, (WIDTH - 560, y), SMALL_FONT, (150, 190, 220))
+
+    if jump_flash_timer > 0:
+        pad = f"Controller {jump_last_pad}" if jump_last_pad else "unknown controller"
+        draw_text(f"JUMP!  ({pad})", (WIDTH // 2, HEIGHT // 2 + 260),
+                  BIG_FONT, (120, 255, 160), center=True)

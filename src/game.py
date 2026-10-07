@@ -89,6 +89,13 @@ while running:
     # ---------- Events ----------
     for event in pygame.event.get():
 
+        if event.type == pygame.JOYDEVICEADDED:
+            gs.add_joystick(event.device_index)
+
+        if event.type == pygame.JOYBUTTONDOWN:
+            print(f"RAW button {event.button} from instance "
+                  f"{getattr(event, 'instance_id', getattr(event, 'joy', '?'))}")
+
         if event.type == pygame.JOYBUTTONDOWN and event.button == gs.JUMP_BUTTON:
             gs.register_jump(event)
             energy_wave.on_jump(gs.jump_last_pad)
