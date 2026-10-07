@@ -72,6 +72,7 @@ import ui  # noqa: E402
 from particle import Particle  # noqa: E402
 import boss  # noqa: E402
 import alien  # noqa: E402
+import energy_wave  # noqa: E402
 
 gs.play_music("menu")
 
@@ -90,8 +91,9 @@ while running:
 
         if event.type == pygame.JOYBUTTONDOWN and event.button == gs.JUMP_BUTTON:
             gs.register_jump(event)
-        if gs.TEST_JUMP_ONLY:
-            continue   # don't let a jump also confirm menus / pick upgrades
+            energy_wave.on_jump(gs.jump_last_pad)
+            if gs.TEST_JUMP_ONLY:
+                continue   # a jump must never also confirm menus / pick upgrades
 
         if event.type == pygame.QUIT:
             running = False
@@ -117,6 +119,11 @@ while running:
                     gs.play_music("menu")
 
         if event.type == pygame.KEYDOWN:
+
+            if event.key == pygame.K_f:
+                energy_wave.on_jump(1)    # simulate player 1 jumping
+            elif event.key == pygame.K_j:
+                energy_wave.on_jump(2)    # simulate player 2 jumping
 
             if event.key == pygame.K_ESCAPE:
                 running = False
@@ -212,6 +219,7 @@ while running:
             asteroid.update(dt)
         for particle in gs.particles:
             particle.update(dt)
+        energy_wave.update(dt)
 
         # ---------- Continuous laser vs asteroids ----------
         if gs.weapon_type == "laser":
@@ -369,6 +377,7 @@ while running:
             pygame.draw.line(gs.screen, (120, 60, 255), nose, gs.laser_end, beam_outer_width)
             pygame.draw.line(gs.screen, (230, 190, 255), nose, gs.laser_end, beam_inner_width)
 
+        energy_wave.draw()
         gs.ship.draw()
 
         # ---------- HUD ----------
@@ -389,6 +398,7 @@ while running:
         pygame.draw.rect(gs.screen, (120, 230, 170), (0, 0, gs.WIDTH * xp_ratio, 6))
 
         boss.draw_boss_ui()
+        energy_wave.draw_hud()
 
         status_rect = pygame.Rect(10, gs.HEIGHT - 76, 330, 66)
         gs.draw_panel(status_rect)
@@ -437,7 +447,6 @@ while running:
                 pygame.draw.rect(gs.screen, (255, 225, 120), (bar_x, bar_y, bar_w * gs.menu_progress, bar_h), border_radius=0)
 
     # ---------- Present (scaled to the real screen, with shake) ----------
-    gs.draw_jump_debug()
     gs.present(dt)
 
 pygame.quit()

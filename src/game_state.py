@@ -667,6 +667,9 @@ def reset_game(chosen_weapon):
     import alien
     alien.reset()
 
+    import energy_wave
+    energy_wave.reset()
+
 
 def choose_weapon(w):
     global state
@@ -702,13 +705,3 @@ def register_jump(event):
             jump_last_pad = i + 1
             break
     print(f"JUMP #{jump_count} from controller {jump_last_pad} (raw id {inst})")
-
-
-def draw_jump_debug():
-    surf = SMALL_FONT.render(f"Jumps: {jump_count}", True, (150, 190, 220))
-    screen.blit(surf, (WIDTH - surf.get_width() - 20, HEIGHT - 40))
-
-    if jump_flash_timer > 0:
-        pad = f"Controller {jump_last_pad}" if jump_last_pad else "unknown controller"
-        draw_text(f"JUMP!  ({pad})", (WIDTH // 2, HEIGHT // 2 + 260),
-                  BIG_FONT, (120, 255, 160), center=True)
