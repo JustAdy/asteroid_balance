@@ -83,8 +83,15 @@ while running:
     dt = min(gs.clock.tick(gs.FPS) / 1000.0, 0.033)
     gs.update_stars(dt)
 
+    gs.jump_flash_timer = max(0.0, gs.jump_flash_timer - dt)
+
     # ---------- Events ----------
     for event in pygame.event.get():
+
+        if event.type == pygame.JOYBUTTONDOWN and event.button == gs.JUMP_BUTTON:
+            gs.register_jump(event)
+        if gs.TEST_JUMP_ONLY:
+            continue   # don't let a jump also confirm menus / pick upgrades
 
         if event.type == pygame.QUIT:
             running = False
@@ -430,6 +437,7 @@ while running:
                 pygame.draw.rect(gs.screen, (255, 225, 120), (bar_x, bar_y, bar_w * gs.menu_progress, bar_h), border_radius=0)
 
     # ---------- Present (scaled to the real screen, with shake) ----------
+    gs.draw_jump_debug()
     gs.present(dt)
 
 pygame.quit()

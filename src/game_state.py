@@ -676,3 +676,39 @@ def choose_weapon(w):
 
     # >>> SOUND HOOK: a good spot for a weapon-select confirm sound.
     play_music("game")
+
+# ---------------- Jump button (balance board) ----------------
+JUMP_BUTTON = 0
+JUMP_FLASH_TIME = 0.5
+TEST_JUMP_ONLY = True      # True = jump button ignores all menu/upgrade actions
+
+jump_count = 0
+jump_flash_timer = 0.0
+jump_last_pad = None       # 1 or 2 (index in joysticks + 1), None = unknown
+
+
+def register_jump(event):
+    """Called when the jump button is pressed on any controller."""
+    global jump_count, jump_flash_timer, jump_last_pad
+    jump_count += 1
+    jump_flash_timer = JUMP_FLASH_TIME
+
+    # Work out which connected pad sent it (pygame 2 / pygame-ce differences)
+    inst = getattr(event, "instance_id", getattr(event, "joy", None))
+    jump_last_pad = None
+    for i, js in enumerate(joysticks):
+        js_id = js.get_instance_id() if hasattr(js, "get_instance_id") else js.get_id()
+        if js_id == inst:
+            jump_last_pad = i + 1
+            break
+    print(f"JUMP #{jump_count} from controller {jump_last_pad} (raw id {inst})")
+
+
+def draw_jump_debug():
+    surf = SMALL_FONT.render(f"Jumps: {jump_count}", True, (150, 190, 220))
+    screen.blit(surf, (WIDTH - surf.get_width() - 20, HEIGHT - 40))
+
+    if jump_flash_timer > 0:
+        pad = f"Controller {jump_last_pad}" if jump_last_pad else "unknown controller"
+        draw_text(f"JUMP!  ({pad})", (WIDTH // 2, HEIGHT // 2 + 260),
+                  BIG_FONT, (120, 255, 160), center=True)
