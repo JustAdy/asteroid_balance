@@ -220,6 +220,54 @@ shake_magnitude = 0.0
 
 stars = []
 
+PAD_ID_AXIS = 1            # the axis the boards use as an ID tag
+PAD_ID_THRESHOLD = 0.3     # |axis| must exceed this to count as a tag
+pad_number = {}            # joystick instance id -> player number (1 or 2)
+
+
+def _js_id(js):
+    return js.get_instance_id() if hasattr(js, "get_instance_id") else js.get_id()
+
+
+def _pad_tag(js):
+    if js.get_numaxes() <= PAD_ID_AXIS:
+        return None
+    v = js.get_axis(PAD_ID_AXIS)
+    if v <= -PAD_ID_THRESHOLD:
+        return 1
+    if v >= PAD_ID_THRESHOLD:
+        return 2
+    return None
+
+
+def assign_pads():
+    """Orders controllers by their firmware ID tag instead of the OS
+    enumeration order. Untagged pads fill any empty slot in the order
+    they were found."""
+    global move_pad, aim_pad
+    pygame.event.pump()
+
+    slots = {1: None, 2: None}
+    untagged = []
+    for js in joysticks:
+        tag = _pad_tag(js)
+        if tag and slots[tag] is None:
+            slots[tag] = js
+        else:
+            untagged.append(js)
+
+    for n in (1, 2):                      # fallback for untagged boards
+        if slots[n] is None and untagged:
+            slots[n] = untagged.pop(0)
+            print(f"WARNING: no ID tag found, controller {n} chosen by enumeration order")
+
+    pad_number.clear()
+    for n, js in slots.items():
+        if js:
+            pad_number[_js_id(js)] = n
+    move_pad, aim_pad = slots[1], slots[2]
+    print(f"Pads assigned: move={move_pad.get_name() if move_pad else None}, "
+          f"aim={aim_pad.get_name() if aim_pad else None}")
 
 # ---------------- One-time setup ----------------
 
@@ -240,7 +288,7 @@ def init():
     pygame.mixer.init()
 
     # Full screen at the monitor's native resolution for `display`, but
-    # everything is actually drawn onto a FIXED-size `screen` canvas
+    # everything is actually drawn onto a FIXED-size `screen` canvasjoys
     # that gets scaled to fit `display` in present() - so the game
     # looks the same relative size no matter what monitor it runs on.
     display = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -298,9 +346,8 @@ def init():
         js.init()
         joysticks.append(js)
         print(f"Controller {i + 1}: {js.get_name()}")
-    # The first two controllers found are used.
-    move_pad = joysticks[0] if len(joysticks) >= 1 else None
-    aim_pad = joysticks[1] if len(joysticks) >= 2 else None
+    pygame.time.wait(300)     # give the boards a moment to report their axes
+    assign_pads()
 
     BACKGROUND = make_gradient(WIDTH, HEIGHT, (14, 10, 34), (3, 5, 16))
     # Scanlines are drawn over the real display (so they stay crisp at
@@ -714,10 +761,8 @@ def add_joystick(device_index):
     js.init()
     joysticks.append(js)
     print(f"Controller {len(joysticks)} connected: {js.get_name()}")
-    if move_pad is None:
-        move_pad = js
-    elif aim_pad is None:
-        aim_pad = js
+    pygame.time.wait(200)
+    assign_pads()
 
 
 def register_jump(event):
@@ -728,11 +773,7 @@ def register_jump(event):
 
     inst = getattr(event, "instance_id", getattr(event, "joy", None))
     jump_last_pad = None
-    for i, js in enumerate(joysticks):
-        js_id = js.get_instance_id() if hasattr(js, "get_instance_id") else js.get_id()
-        if js_id == inst:
-            jump_last_pad = i + 1
-            break
+    jump_last_pad = pad_number.get(inst)
     jump_counts[jump_last_pad] = jump_counts.get(jump_last_pad, 0) + 1
     print(f"JUMP #{jump_count} from controller {jump_last_pad} (raw id {inst})")
 

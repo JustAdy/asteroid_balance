@@ -4,6 +4,8 @@
 #include <HX711.h> // https://github.com/RobTillaart/HX711?tab=MIT-1-ov-file
 #include "Joystick.h" // https://github.com/MHeironimus/ArduinoJoystickLibrary/tree/version-1.0
 
+#define BOARD_ID 1   // 1 = player 1 (moves), 2 = player 2 (aims)
+
 Adafruit_MPU6050 mpu;
 HX711 hx;
 
@@ -12,7 +14,7 @@ HX711 hx;
 const bool testAutoSendMode = true;
 float lastWeight = 0;
 float currentWeight = 0;
-float treshold = 250000; // when the inscrease is more than the treshold, register it as jump
+float treshold = 300000; // when the inscrease is more than the treshold, register it as jump
 
 void setup(void) {
   Serial.begin(115200);
@@ -43,6 +45,10 @@ void setup(void) {
   {
     Joystick.begin(false);
   }
+
+  // Identity tag: Y axis is unused by the game, so it holds a fixed
+  // value that tells the PC which board this is.
+  Joystick.setYAxis(BOARD_ID == 1 ? -100 : 100);
 
   // data pin, clock pin
   hx.begin(4, 5, false, true);
