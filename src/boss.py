@@ -15,8 +15,8 @@ import game_state as gs
 # CONFIG - EDIT BOSS STATS HERE
 # ============================================================================
 
-BOSS_EVERY_N_WAVES = 10          # a boss appears at wave 10, 20, 30, ...
-BOSS_BLOCKS_NORMAL_SPAWNS = False  # True = no regular asteroids while a boss is alive
+BOSS_EVERY_N_WAVES = 15          # a boss appears at wave 15, 30, 45, ...
+BOSS_BLOCKS_NORMAL_SPAWNS = True  # True = no regular asteroids while a boss is alive
 
 # What happens if a boss reaches the bottom of the screen.
 # Damage dealt to the ship's HP. Default is high enough to be instant
@@ -69,6 +69,9 @@ def reset():
     global bosses_spawned, next_boss_wave
     bosses_spawned = 0
     next_boss_wave = BOSS_EVERY_N_WAVES
+
+    BOSS_TYPES[0]["xp"] = 600
+    BOSS_TYPES[1]["xp"] = 1000
 
 
 def get_boss():
@@ -144,7 +147,8 @@ class Boss:
         gs.trigger_shake(12, 0.4)
         gs.score += self.cfg["score"]
         gs.gain_xp(self.cfg["xp"])
-
+        BOSS_TYPES[0]["xp"] += 500
+        BOSS_TYPES[1]["xp"] += 650
 
 def draw_boss_ui():
     """Big health bar + warning banner. Call after the HUD is drawn."""

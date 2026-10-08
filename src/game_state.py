@@ -668,7 +668,7 @@ def gain_xp(amount):
     while xp >= xp_to_next:
         xp -= xp_to_next
         level += 1
-        xp_to_next = int(xp_to_next * 1.5) + 25
+        xp_to_next = int(xp_to_next * 1.25) + 25
         pending_level_ups += 1
 
 
