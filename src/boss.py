@@ -39,7 +39,7 @@ BOSS_TYPES = [
         "sway_speed": 0.8,      # how fast it sways
         "spin": 0.3,            # sprite rotation speed (rad/sec)
         "score": 1000,          # score on kill
-        "xp": 400,              # XP on kill
+        "xp": 600,              # XP on kill
         "tint": (255, 110, 110),  # colour multiplied over the asteroid sprite
     },
     {
@@ -51,7 +51,7 @@ BOSS_TYPES = [
         "sway_speed": 0.6,
         "spin": -0.2,
         "score": 2000,
-        "xp": 700,
+        "xp": 1000,
         "tint": (170, 110, 255),
     },
 ]
