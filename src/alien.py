@@ -38,7 +38,7 @@ ALIEN_HEALTH_SCALING_DIVISOR = 10  # health * (1 + wave / this), like asteroids
 ALIEN_TYPES = {
     "drone": {
         "behavior": "homing", "shape": "triangle", "color": (255, 90, 90),
-        "radius": 22, "health": 60, "speed": 300,
+        "radius": 22, "health": 60, "speed": 350,
         "turn_rate": 1.6,            # rad/sec - lower = easier to dodge
         "score": 75, "xp": 35, "min_wave": 2, "weight": 4,
         "stun_time": 2.0, 
@@ -54,7 +54,7 @@ ALIEN_TYPES = {
     },
     "gunship": {
         "behavior": "shooter", "shape": "hex", "color": (255, 200, 70),
-        "radius": 32, "health": 220, "speed": 90,
+        "radius": 32, "health": 180, "speed": 90,
         "hover_y": 200,              # height it stops descending at
         "strafe_amplitude": 300, "strafe_speed": 0.7,
         "fire_interval": 2.0,        # seconds between shots

@@ -108,6 +108,24 @@ sfx_explosion = sfx_hit = sfx_levelup = None
 
 WEAPON_INFO = None
 
+# ---------------- Star field ----------------
+STAR_SPRITE_FILES = [os.path.join("assets", "stars", f"star_{i}.png") for i in range(1, 7)]
+STAR_COUNT = 150
+
+# Depth layers. "share" = fraction of STAR_COUNT; ranges are (min, max).
+#   size  = drawn size in px (longest side of the image)
+#   drift = fall speed in px/sec (far layers move slower = parallax)
+#   alpha = peak brightness 0-255
+STAR_LAYERS = [
+    {"share": 0.55, "size": (8, 14),  "drift": (10, 25),  "alpha": (70, 140)},   # far
+    {"share": 0.33, "size": (16, 26), "drift": (30, 55),  "alpha": (120, 200)},  # mid
+    {"share": 0.12, "size": (30, 46), "drift": (70, 110), "alpha": (170, 255)},  # near
+]
+STAR_TWINKLE_DEPTH = 0.45   # 0 = no twinkle, 1 = fades fully out
+
+star_sprites = []
+_star_surface_cache = {}
+
 # ---------------- Controllers ----------------
 joysticks = []
 move_pad = None
@@ -354,16 +372,8 @@ def init():
     # native resolution, including over any letterbox bars).
     SCANLINE_OVERLAY = make_scanline_overlay(display_w, display_h)
 
-    for _ in range(150):
-        stars.append({
-            "x": random.uniform(0, WIDTH),
-            "y": random.uniform(0, HEIGHT),
-            "drift": random.uniform(12, 70),
-            "size": random.choice([1, 1, 1, 2, 2]),
-            "phase": random.uniform(0, math.tau),
-            "twinkle_speed": random.uniform(1.0, 3.2),
-            "brightness": random.randint(90, 210),
-        })
+    load_star_sprites()
+    build_stars()
 
     state = STATE_START
     leaderboard = load_leaderboard()
@@ -547,17 +557,67 @@ def make_scanline_overlay(width, height):
 def update_stars(dt):
     for s in stars:
         s["y"] += s["drift"] * dt
-        if s["y"] > HEIGHT:
-            s["y"] -= HEIGHT
+        if s["y"] > HEIGHT + s["size"]:
+            s["y"] = -s["size"]
             s["x"] = random.uniform(0, WIDTH)
 
 
 def draw_stars():
     t = pygame.time.get_ticks() / 1000.0
     for s in stars:
-        twinkle = 0.55 + 0.45 * math.sin(t * s["twinkle_speed"] + s["phase"])
-        b = clamp(int(s["brightness"] * twinkle), 0, 255)
-        pygame.draw.circle(screen, (b, b, min(255, b + 30)), (int(s["x"]), int(s["y"])), s["size"])
+        twinkle = 1.0 - STAR_TWINKLE_DEPTH * (0.5 + 0.5 * math.sin(t * s["twinkle_speed"] + s["phase"]))
+        alpha = clamp(int(s["alpha"] * twinkle), 0, 255)
+        surf = s["surf"]
+        if surf:
+            surf.set_alpha(alpha)
+            screen.blit(surf, surf.get_rect(center=(int(s["x"]), int(s["y"]))))
+        else:  # fallback if no sprites were found
+            b = alpha
+            pygame.draw.circle(screen, (b, b, min(255, b + 30)),
+                               (int(s["x"]), int(s["y"])), max(1, s["size"] // 8))
+
+def load_star_sprites():
+    """Loads whichever of STAR_SPRITE_FILES exist. Missing files are skipped."""
+    star_sprites.clear()
+    for path in STAR_SPRITE_FILES:
+        try:
+            star_sprites.append(pygame.image.load(path).convert_alpha())
+        except Exception:
+            print(f"Star sprite not found: {path}")
+
+
+def _star_surface(sprite_index, size):
+    """Scaled copy of a star sprite, cached per (sprite, size)."""
+    key = (sprite_index, size)
+    if key not in _star_surface_cache:
+        img = star_sprites[sprite_index]
+        w, h = img.get_size()
+        k = size / max(w, h)
+        _star_surface_cache[key] = pygame.transform.smoothscale(
+            img, (max(1, int(w * k)), max(1, int(h * k))))
+    return _star_surface_cache[key]
+
+def build_stars():
+    stars.clear()
+    for layer in STAR_LAYERS:
+        for _ in range(int(STAR_COUNT * layer["share"])):
+            size = random.randint(*layer["size"])
+            star = {
+                "x": random.uniform(0, WIDTH),
+                "y": random.uniform(0, HEIGHT),
+                "drift": random.uniform(*layer["drift"]),
+                "size": size,
+                "phase": random.uniform(0, math.tau),
+                "twinkle_speed": random.uniform(1.0, 3.2),
+                "alpha": random.randint(*layer["alpha"]),
+                "surf": None,
+            }
+            if star_sprites:
+                star["surf"] = _star_surface(random.randrange(len(star_sprites)), size)
+            stars.append(star)
+
+
+
 
 
 # ---------------- Screen shake ----------------
