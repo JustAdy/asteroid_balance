@@ -41,6 +41,8 @@ ALIEN_TYPES = {
         "radius": 22, "health": 60, "speed": 300,
         "turn_rate": 1.6,            # rad/sec - lower = easier to dodge
         "score": 75, "xp": 35, "min_wave": 2, "weight": 4,
+        "stun_time": 2.0, 
+         "sprite": "assets/alien_drone.png",   "sprite_scale": 4.0
     },
     "weaver": {
         "behavior": "weaver", "shape": "diamond", "color": (90, 255, 150),
@@ -48,6 +50,7 @@ ALIEN_TYPES = {
         "sway_amplitude": 220, "sway_speed": 2.2,
         "drift": 60,                 # px/sec its centre line slides toward your x
         "score": 100, "xp": 45, "min_wave": 3, "weight": 3,
+        "sprite": "assets/alien_weaver.png",  "sprite_scale": 2.0
     },
     "gunship": {
         "behavior": "shooter", "shape": "hex", "color": (255, 200, 70),
@@ -57,6 +60,7 @@ ALIEN_TYPES = {
         "fire_interval": 2.0,        # seconds between shots
         "shot_speed": 380,
         "score": 150, "xp": 70, "min_wave": 4, "weight": 2,
+        "sprite": "assets/alien_gunship.png", "sprite_scale": 2.0
     },
     "dasher": {
         "behavior": "dasher", "shape": "square", "color": (200, 120, 255),
@@ -65,11 +69,15 @@ ALIEN_TYPES = {
         "windup": 1.0,               # warning flash time before the dash
         "dash_speed": 900,
         "score": 125, "xp": 55, "min_wave": 5, "weight": 2,
+        "sprite": "assets/alien_dasher.png",  "sprite_scale": 2.0
     },
 }
 
-SHOT_RADIUS = 16
+SHOT_RADIUS = 8
 SHOT_LIFETIME = 6.0
+STUN_IMMUNITY = 1.5        # sec after a stun ends during which drones can't stun again
+SHOT_SPRITE = "assets/alien_shot.png"
+SHOT_DRAW_SIZE = 10        # drawn size in px (the hitbox is still SHOT_RADIUS)
 
 # ============================================================================
 
@@ -82,6 +90,43 @@ _SHAPES = {
     "hex": [(1, 0), (0.5, 0.87), (-0.5, 0.87), (-1, 0), (-0.5, -0.87), (0.5, -0.87)],
     "square": [(0.8, 0.8), (-0.8, 0.8), (-0.8, -0.8), (0.8, -0.8)],
 }
+
+_sprite_cache = {}
+_flash_cache = {}
+
+
+def _load_sprite(path, diameter):
+    """Loads + scales a sprite (cached). Returns None if there is no file,
+    so the polygon fallback is used until the art exists."""
+    if not path:
+        return None
+    key = (path, diameter)
+    if key not in _sprite_cache:
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            w, h = img.get_size()
+            k = diameter / max(w, h)
+            img = pygame.transform.smoothscale(img, (max(1, int(w * k)), max(1, int(h * k))))
+        except Exception:
+            img = None
+        _sprite_cache[key] = img
+    return _sprite_cache[key]
+
+
+def _white_version(img):
+    if id(img) not in _flash_cache:
+        flash = img.copy()
+        flash.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGB_ADD)
+        _flash_cache[id(img)] = flash
+    return _flash_cache[id(img)]
+
+
+def ram_stun(a):
+    """A stunning alien (drone) rammed the ship."""
+    gs.explosion(a.x, a.y, 16)
+    gs.sfx_hit.play()
+    if gs.ship.stun(a.stun_time, STUN_IMMUNITY):
+        gs.trigger_shake(5, 0.2)
 
 
 def reset():
@@ -97,6 +142,7 @@ class AlienShot:
         self.vx = math.cos(angle) * speed
         self.vy = math.sin(angle) * speed
         self.life = SHOT_LIFETIME
+        self.angle = angle
 
     def update(self, dt):
         self.x += self.vx * dt
@@ -104,7 +150,11 @@ class AlienShot:
         self.life -= dt
 
     def draw(self):
-        # >>> ART HOOK: replace with an enemy-bullet sprite.
+        sprite = _load_sprite(SHOT_SPRITE, SHOT_DRAW_SIZE)
+        if sprite:
+            rotated = pygame.transform.rotate(sprite, -math.degrees(self.angle) - 90)
+            gs.screen.blit(rotated, rotated.get_rect(center=(self.x, self.y)))
+            return
         r = SHOT_RADIUS
         pygame.draw.rect(gs.screen, (255, 90, 170), (int(self.x) - r, int(self.y) - r, r * 2, r * 2))
         pygame.draw.rect(gs.screen, (255, 220, 240), (int(self.x) - r // 2, int(self.y) - r // 2, r, r))
@@ -119,6 +169,7 @@ class Alien:
         self.cfg = cfg
         self.behavior = cfg["behavior"]
         self.radius = cfg["radius"]
+        self.stun_time = cfg.get("stun_time", 0)
 
         scaling = 1 + gs.wave / ALIEN_HEALTH_SCALING_DIVISOR
         self.max_health = cfg["health"] * scaling
@@ -140,6 +191,7 @@ class Alien:
         self.dash_dir = (0.0, 1.0)
         if self.behavior == "dasher":
             self.hover_y = random.uniform(cfg["hover_y_min"], cfg["hover_y_max"])
+
 
     # ---------- behaviors ----------
     def update(self, dt):
@@ -203,22 +255,28 @@ class Alien:
 
     # ---------- drawing ----------
     def draw(self):
-        # >>> ART HOOK: replace this polygon with an alien sprite per type
-        #     (rotate by self.heading, blit centred on self.x/self.y).
-        color = self.cfg["color"]
         windup = self.behavior == "dasher" and self.mode == "windup"
-        if windup and int(self.age * 12) % 2 == 0:
-            color = (255, 255, 255)
-
+        flash = windup and int(self.age * 12) % 2 == 0
         cos_h, sin_h = math.cos(self.heading), math.sin(self.heading)
-        pts = [
-            (self.x + (px * cos_h - py * sin_h) * self.radius,
-             self.y + (px * sin_h + py * cos_h) * self.radius)
-            for px, py in _SHAPES[self.cfg["shape"]]
-        ]
-        pygame.draw.polygon(gs.screen, color, pts)
-        pygame.draw.polygon(gs.screen, (20, 20, 30), pts, 3)
-        pygame.draw.circle(gs.screen, (20, 20, 30), (int(self.x), int(self.y)), max(3, self.radius // 4))
+
+        diameter = int(self.radius * 2 * self.cfg.get("sprite_scale", 1.0))
+        sprite = _load_sprite(self.cfg.get("sprite"), diameter)
+
+        if sprite:
+            if flash:
+                sprite = _white_version(sprite)
+            rotated = pygame.transform.rotate(sprite, -math.degrees(self.heading) - 90)
+            gs.screen.blit(rotated, rotated.get_rect(center=(self.x, self.y)))
+        else:
+            color = (255, 255, 255) if flash else self.cfg["color"]
+            pts = [
+                (self.x + (px * cos_h - py * sin_h) * self.radius,
+                 self.y + (px * sin_h + py * cos_h) * self.radius)
+                for px, py in _SHAPES[self.cfg["shape"]]
+            ]
+            pygame.draw.polygon(gs.screen, color, pts)
+            pygame.draw.polygon(gs.screen, (20, 20, 30), pts, 3)
+            pygame.draw.circle(gs.screen, (20, 20, 30), (int(self.x), int(self.y)), max(3, self.radius // 4))
 
         if windup:  # telegraph the dash line
             end = (self.x + cos_h * 1400, self.y + sin_h * 1400)

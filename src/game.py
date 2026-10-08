@@ -202,10 +202,12 @@ while running:
         if gs.weapon_type == "bullets":
             gs.ship.shoot()
 
-        # Difficulty: wave from score, PLUS a continuous ramp from
-        # player level and time survived, so things keep getting
-        # harder and faster the longer a run goes on.
-        gs.wave = 1 + gs.score // 400
+        # Wave advances from score OR from time survived, whichever is
+        # further along. Frozen while a boss is alive.
+        if not boss.is_boss_active():
+            gs.wave_clock += dt
+            gs.wave = max(gs.wave, 1 + max(gs.score // gs.WAVE_SCORE_STEP,
+                                           int(gs.wave_clock // gs.WAVE_TIME_STEP)))
 
         boss.maybe_spawn_boss()
         alien.update(dt)
@@ -221,7 +223,6 @@ while running:
 
         for bullet in gs.bullets:
             bullet.update(dt)
-        alien.draw_projectiles()
         for asteroid in gs.asteroids:
             asteroid.update(dt)
         for particle in gs.particles:
@@ -229,7 +230,7 @@ while running:
         energy_wave.update(dt)
 
         # ---------- Continuous laser vs asteroids ----------
-        if gs.weapon_type == "laser":
+        if gs.weapon_type == "laser" and gs.ship.stun_timer <= 0:
             dx, dy = math.cos(gs.ship.angle), math.sin(gs.ship.angle)
             hits = []
 
@@ -298,6 +299,13 @@ while running:
 
                         break
 
+        # ---------- Stunning aliens (drones) ram the ship ----------
+        for asteroid in gs.asteroids[:]:
+            if getattr(asteroid, "stun_time", 0) > 0 and gs.circle_collision(
+                    gs.ship.x, gs.ship.y, 18, asteroid.x, asteroid.y, asteroid.radius):
+                gs.asteroids.remove(asteroid)
+                alien.ram_stun(asteroid)
+
         # ---------- Asteroids hit the ship ----------
         if gs.ship.invulnerable <= 0:
             for asteroid in gs.asteroids[:]:
@@ -365,10 +373,11 @@ while running:
             particle.draw()
         for asteroid in gs.asteroids:
             asteroid.draw()
+        alien.draw_projectiles()
         for bullet in gs.bullets:
             bullet.draw()
 
-        if gs.weapon_type == "laser" and gs.state == gs.STATE_PLAYING:
+        if gs.weapon_type == "laser" and gs.state == gs.STATE_PLAYING and gs.ship.stun_timer <= 0:
             nose = (
                 gs.ship.x + math.cos(gs.ship.angle) * 27,
                 gs.ship.y + math.sin(gs.ship.angle) * 27
@@ -392,7 +401,7 @@ while running:
         gs.draw_panel(hud_rect)
 
         gs.draw_text(f"HP {gs.ship.hp}", (28, 20))
-        gs.draw_text(f"SCORE {gs.score}", (gs.WIDTH - 170, 20))
+        gs.draw_text(f"SCORE {gs.score}", (gs.WIDTH - 250, 20))
         gs.draw_text(f"WAVE {gs.wave}", (gs.WIDTH // 2, 20), center=True)
         gs.draw_text(f"LEVEL {gs.level}", (28, 52), gs.FONT, (170, 230, 170))
 

@@ -136,6 +136,10 @@ BASE_HIT_INVULN_TIME = 1.4
 # slow that ramp down.
 ASTEROID_HEALTH_SCALING_DIVISOR = 10
 
+# Wave progression
+WAVE_SCORE_STEP = 400     # +1 wave per this much score
+WAVE_TIME_STEP = 15.0     # +1 wave per this many seconds survived (boss time doesn't count)
+
 BULLET_DAMAGE = BASE_BULLET_DAMAGE
 BULLET_COOLDOWN = BASE_BULLET_COOLDOWN
 BULLET_SPREAD_COUNT = BASE_BULLET_SPREAD_COUNT
@@ -191,6 +195,7 @@ particles = []
 
 score = 0
 wave = 1
+wave_clock = 0.0
 spawn_timer = 0
 
 # Progression system
@@ -617,7 +622,7 @@ def spawn_asteroid():
 
 def reset_game(chosen_weapon):
     global ship, bullets, asteroids, particles
-    global score, wave, spawn_timer
+    global score, wave, spawn_timer, wave_clock
     global laser_end
     global xp, level, xp_to_next, pending_level_ups, leveling_up, upgrade_choices, elapsed_time
     global weapon_type
@@ -636,6 +641,7 @@ def reset_game(chosen_weapon):
 
     score = 0
     wave = 1
+    wave_clock = 0.0
     spawn_timer = 0
 
     xp = 0

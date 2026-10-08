@@ -1,5 +1,6 @@
 import math
 import pygame
+import random
 
 import game_state as gs
 from bullet import Bullet
@@ -14,8 +15,31 @@ class Ship:
         self.cooldown = 0
         self.hp = 3
         self.invulnerable = 0
+        self.stun_timer = 0.0
+        self.stun_immunity = 0.0
+        self._stun_immunity_after = 0.0
+
+    def stun(self, duration, immunity_after):
+        """Returns False if the ship is already stunned or still immune."""
+        if self.stun_timer > 0 or self.stun_immunity > 0:
+            return False
+        self.stun_timer = duration
+        self._stun_immunity_after = immunity_after
+        return True
 
     def update(self, dt):
+        if self.stun_timer > 0:
+            self.stun_timer = max(0.0, self.stun_timer - dt)
+            if self.stun_timer == 0:
+                self.stun_immunity = self._stun_immunity_after
+        else:
+            self.stun_immunity = max(0.0, self.stun_immunity - dt)
+            self._control(dt)
+
+        self.cooldown -= dt
+        self.invulnerable = max(0, self.invulnerable - dt)
+
+    def _control(self, dt):
         # Controller 1: horizontal movement
         move = 0
 
@@ -62,6 +86,8 @@ class Ship:
         self.invulnerable = max(0, self.invulnerable - dt)
 
     def shoot(self):
+        if self.stun_timer > 0:
+            return False
         if self.cooldown > 0:
             return False
 
@@ -103,6 +129,16 @@ class Ship:
         rotated = pygame.transform.rotate(gs.ship_img, -math.degrees(self.angle) - 90)
         rect = rotated.get_rect(center=(self.x, self.y))
         gs.screen.blit(rotated, rect)
+
+        if self.stun_timer > 0:
+            for _ in range(5):
+                a = random.uniform(0, math.tau)
+                r1, r2 = random.uniform(20, 30), random.uniform(34, 52)
+                pygame.draw.line(gs.screen, (255, 255, 120),
+                                 (self.x + math.cos(a) * r1, self.y + math.sin(a) * r1),
+                                 (self.x + math.cos(a) * r2, self.y + math.sin(a) * r2), 3)
+            gs.draw_text(f"STUNNED {self.stun_timer:.1f}s", (self.x, self.y - 60),
+                         gs.SMALL_FONT, (255, 255, 120), center=True)
 
         # Thruster flame
         # >>> ART HOOK: swap these two circles for an animated flame/thruster
