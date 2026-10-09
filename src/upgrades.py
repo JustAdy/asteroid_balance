@@ -17,7 +17,7 @@ import game_state as gs
 # ---------------- Upgrades (weapon-specific + generic) ----------------
 
 def upgrade_laser_overcharge():
-    gs.LASER_DPS += 35
+    gs.LASER_DPS += 40
 
 
 def upgrade_laser_pierce():

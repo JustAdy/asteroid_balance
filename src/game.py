@@ -12,8 +12,6 @@ Controller 2 (single-axis controller):
   facing turns at a speed proportional to how far the stick
   is pushed (it is NOT an absolute direction, since this
   controller physically only moves left/right).
-  Button 0 -> Confirm on menus.
-  Button 1 -> Second menu option (e.g. pick "Blaster").
 
 WEAPON CHOICE (picked once per run, at the start):
   [1] Laser Cannon -> a continuous beam that always fires
@@ -42,19 +40,10 @@ Keyboard/mouse as test controls:
   A/D or Left/Right arrows -> Ship movement
   Mouse -> Aim (absolute; only used as a fallback when no
            controller 2 is connected)
-  1 / 2 / 3 -> Pick a menu option / an upgrade instantly
+  1 / 2 -> Pick a menu option / an upgrade instantly
   Enter / Space -> Confirm on the start screen
   R -> Return to the main menu after Game Over
-
-FILE LAYOUT:
-  game_state.py -> shared engine state (display/audio setup,
-                   constants, assets, and all mutable runtime
-                   game state), imported everywhere as `gs`
-  bullet.py / asteroid.py / particle.py / ship.py
-                -> the entity classes
-  upgrades.py   -> upgrade definitions + level-up flow
-  ui.py         -> the start/weapon-select/upgrade-card screens
-  game.py       -> this file: wiring + the main loop
+  F + J -> Energy wave ability
 """
 
 import math

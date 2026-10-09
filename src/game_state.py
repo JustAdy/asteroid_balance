@@ -135,8 +135,8 @@ aim_pad = None
 # These are the BASE values. Upgrades modify the mutable globals below
 # them; reset_game() restores the mutable ones from these.
 
-BASE_BULLET_DAMAGE = 45
-BASE_BULLET_COOLDOWN = 0.14
+BASE_BULLET_DAMAGE = 40
+BASE_BULLET_COOLDOWN = 0.2
 BASE_BULLET_SPREAD_COUNT = 1
 BASE_BULLET_PIERCE = 0
 BASE_BULLET_RANGE = 1.3       # bullet lifetime in seconds; combined with
